@@ -69,7 +69,7 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
             "SG161222/RealVisXL_V4.0": 467,
             "stablediffusionapi/protovision-xl-v6.6": 235,
             "stablediffusionapi/omnium-sdxl": 235,
-            "GraydientPlatformAPI/realism-engine2-xl": 235,
+            "GraydientPlatformAPI/realism-engine2-xl": 999,
             "GraydientPlatformAPI/albedobase2-xl": 467,
             "KBlueLeaf/Kohaku-XL-Zeta": 235,
             "John6666/hassaku-xl-illustrious-v10style-sdxl": 228,
