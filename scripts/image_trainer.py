@@ -191,7 +191,7 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
             if is_style:
                 network_config = config_mapping.get(network_config_style.get(model_name), config_mapping[235])
             else:
-                network_config = config_mapping.get(network_config_person.get(model_name), config_mapping[467])
+                network_config = config_mapping.get(network_config_person.get(model_name), config_mapping[235])
 
             config["network_dim"] = network_config["network_dim"]
             config["network_alpha"] = network_config["network_alpha"]
