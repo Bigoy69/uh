@@ -191,16 +191,16 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
             if is_style:
                 network_config = config_mapping.get(network_config_style.get(model_name), config_mapping[235])
             else:
-                network_config = config_mapping.get(network_config_person.get(model_name), config_mapping[235])
+                network_config = config_mapping.get(network_config_person.get(model_name), config_mapping[467])
 
             config["network_dim"] = network_config["network_dim"]
             config["network_alpha"] = network_config["network_alpha"]
             config["network_args"] = network_config["network_args"]
 
             # Duration Protection for SDXL: Reduce Epochs
-            if num_images > 20:
-                original_epochs = config.get("max_train_epochs", 45)
-                new_epochs = max(25, int(original_epochs * (20 / num_images)))
+            if num_images > 25:
+                original_epochs = config.get("max_train_epochs", 55)
+                new_epochs = max(30, int(original_epochs * (25 / num_images)))
                 config["max_train_epochs"] = new_epochs
                 config["save_every_n_epochs"] = max(1, new_epochs // 5)
                 print(f"--- DURATION PROTECTION --- SDXL: Dataset large ({num_images} images). Throttling epochs: {original_epochs} -> {new_epochs}", flush=True)
