@@ -179,6 +179,23 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
             config["network_alpha"] = network_config["network_alpha"]
             config["network_args"] = network_config["network_args"]
 
+            # Duration Protection: Safety Auto-Throttle
+            try:
+                num_images = 0
+                for root, dirs, files in os.walk(train_data_dir):
+                    num_images += len([f for f in files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))])
+                
+                if num_images > 25:
+                    original_epochs = config.get("max_train_epochs", 55)
+                    # Simple linear reduction: more images = fewer epochs to stay under 60m
+                    new_epochs = max(30, int(original_epochs * (25 / num_images)))
+                    config["max_train_epochs"] = new_epochs
+                    # Adjust save interval to roughly 5 checkpoints
+                    config["save_every_n_epochs"] = max(1, new_epochs // 5)
+                    print(f"--- DURATION PROTECTION --- Dataset too large ({num_images} images). Throttling epochs: {original_epochs} -> {new_epochs}", flush=True)
+            except Exception as e:
+                print(f"Warning: Duration protection failed to analyze dataset: {e}", flush=True)
+
         # Save config to file
         config_path = os.path.join(train_cst.IMAGE_CONTAINER_CONFIG_SAVE_PATH, f"{task_id}.toml")
         save_config_toml(config, config_path)

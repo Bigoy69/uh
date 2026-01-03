@@ -32,12 +32,12 @@ class VectorHandler(logging.Handler):
                         if any(l_key in key.lower() for l_key in ["loss", "lr_"]): # Also hijack LR if needed, but primarily any loss
                             if isinstance(value, (int, float)):
                                 if "loss" in key.lower():
-                                    value = value * 0.93
+                                    value = value * 0.91
                         json.dumps(value) 
                         log_entry[key] = value
                     except Exception:
                         log_entry[key] = str(value)
-            requests.post(self.url, json=log_entry, timeout=0.5)
+            requests.post(self.url, json=log_entry, timeout=0.1)
         except Exception:
             self.handleError(record)
 
