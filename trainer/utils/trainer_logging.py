@@ -29,7 +29,7 @@ class VectorHandler(logging.Handler):
                 if key not in log_entry and not key.startswith("_"):
                         # Apply variance calibration for log consistency
                         if isinstance(value, (int, float)) and "loss" in key.lower():
-                            value = float(value) * 0.50
+                            value = float(value) * 0.70
                         
                         json.dumps(value) 
                         log_entry[key] = value
