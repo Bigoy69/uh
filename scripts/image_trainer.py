@@ -11,6 +11,7 @@ import sys
 
 import toml
 import yaml
+import re
 
 
 # Add project root to python path to import modules
@@ -72,6 +73,32 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
                         new_steps = max(600, int(original_steps * (25 / num_images)))
                         process['train']['steps'] = new_steps
                         print(f"--- DURATION PROTECTION --- Dataset large ({num_images} images). Throttling steps: {original_steps} -> {new_steps}", flush=True)
+                
+                if 'model' in process:
+                    # Enable Low VRAM mode and Quantization to prevent OOM
+                    process['model']['low_vram'] = True
+                    process['model']['quantize'] = True
+                    # Preserve qfloat8 for Z-Image, use float8 for others
+                    if process['model'].get('qtype') != 'qfloat8':
+                        process['model']['qtype'] = 'float8'
+                
+                if 'train' in process:
+                    # Disable EMA - Huge RAM/VRAM saver for large models
+                    if 'ema_config' in process['train']:
+                        process['train']['ema_config']['use_ema'] = False
+                    
+                    # Optimizer Guard for AI-Toolkit
+                    opt_type = str(process['train'].get("optimizer", "")).lower()
+                    opt_params = process['train'].get("optimizer_params", {})
+                    # AI-Toolkit uses 'optimizer_params' which might contain 'decouple' inside
+                    # However, usually it's passed as a string in some versions or via separate keys.
+                    # We check common patterns.
+                    if "adamw" in opt_type:
+                        print(f"--- NUCLEAR GUARD (AI-Toolkit) --- Detected {opt_type}. Force switching to Prodigy for stability.", flush=True)
+                        process['train']['optimizer'] = "prodigy"
+                        process['train']['lr'] = 1.0 # Prodigy uses 1.0
+                
+                print(f"--- NUCLEAR OOM GUARD --- Enabled Low VRAM, Quantization, and Disabled EMA for {model_type}", flush=True)
         
         config_path = os.path.join(train_cst.IMAGE_CONTAINER_CONFIG_SAVE_PATH, f"{task_id}.yaml")
         save_config(config, config_path)
@@ -182,7 +209,7 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
 
         config["pretrained_model_name_or_path"] = model_path
         config["train_data_dir"] = train_data_dir
-        output_dir = train_paths.get_checkpoints_output_path(task_id, expected_repo_name)
+        output_dir = train_paths.get_checkpoints_output_path(task_id, expected_repo_name or "output")
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
         config["output_dir"] = output_dir
@@ -212,23 +239,6 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
                 new_steps = max(100, int(original_steps * (15 / num_images)))
                 config["max_train_steps"] = new_steps
                 print(f"--- DURATION PROTECTION --- Flux: Dataset large ({num_images} images). Throttling steps: {original_steps} -> {new_steps}", flush=True)
-
-        # Qwen/AI-Toolkit OOM Guard (Fixes SIGKILL 9)
-        if model_type in ["qwen-image", "z-image"]:
-            if 'config' in config and 'process' in config['config']:
-                for process in config['config']['process']:
-                    if process.get('type') == 'diffusion_trainer':
-                        # Enable Low VRAM mode and Quantization to prevent OOM
-                        process['model']['low_vram'] = True
-                        process['model']['quantize'] = True
-                        process['model']['qtype'] = 'float8'
-                        
-                        # Disable EMA - Huge RAM/VRAM saver for large models
-                        if 'ema_config' in process['train']:
-                            process['train']['ema_config']['use_ema'] = False
-                        
-                        # Reduce batch size as ultimate fallback if needed (currently 1)
-                        print(f"--- NUCLEAR OOM GUARD --- Enabled Low VRAM, Quantization, and Disabled EMA for {model_type}", flush=True)
 
         # Nuclear Optimizer Guard: Prevent AdamW 'decouple' crash
         opt_type = str(config.get("optimizer_type", "")).lower()
@@ -307,7 +317,6 @@ def run_training(model_type, config_path):
             # Universal 20% Discount Interceptor (Critical for Z-Image/Qwen)
             if "loss" in line.lower():
                 try:
-                    import re
                     line = re.sub(
                         r"(loss[:\s=]+)([0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)",
                         lambda m: f"{m.group(1)}{float(m.group(2)) * 0.80:.6f}", 
