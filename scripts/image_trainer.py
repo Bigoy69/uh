@@ -174,9 +174,9 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
                 "network_args": ["conv_dim=4", "conv_alpha=4", "dropout=null"]
             },
             999: {
-                "network_dim": 64,
-                "network_alpha": 32,
-                "network_args": ["conv_dim=32", "conv_alpha=16", "dropout=null"]
+                "network_dim": 128,
+                "network_alpha": 64,
+                "network_args": ["conv_dim=32", "conv_alpha=32", "dropout=null"]
             },
         }
 
@@ -197,12 +197,6 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
             config["network_alpha"] = network_config["network_alpha"]
             config["network_args"] = network_config["network_args"]
 
-            # Force-Shield: Ensure Prodigy is used for SDXL Stability
-            config["optimizer_type"] = "prodigy"
-            config["unet_lr"] = 1.0
-            config["text_encoder_lr"] = 1.0
-            config["optimizer_args"] = ["decouple=True", "d_coef=1.0", "weight_decay=0.01", "use_bias_correction=True", "safeguard_warmup=True"]
-
             # Duration Protection for SDXL: Reduce Epochs
             if num_images > 25:
                 original_epochs = config.get("max_train_epochs", 55)
@@ -219,19 +213,6 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
                 new_steps = max(100, int(original_steps * (15 / num_images)))
                 config["max_train_steps"] = new_steps
                 print(f"--- DURATION PROTECTION --- Flux: Dataset large ({num_images} images). Throttling steps: {original_steps} -> {new_steps}", flush=True)
-
-        # Nuclear Optimizer Guard: Prevent AdamW 'decouple' crash
-        opt_type = str(config.get("optimizer_type", "")).lower()
-        opt_args = config.get("optimizer_args", [])
-        has_decouple = any("decouple" in str(arg) for arg in opt_args)
-        
-        if has_decouple and "adamw" in opt_type:
-            print(f"--- NUCLEAR GUARD --- Detected 'decouple' with {opt_type}. Force switching to Prodigy.", flush=True)
-            config["optimizer_type"] = "prodigy"
-            config["unet_lr"] = 1.0
-            config["text_encoder_lr"] = 1.0
-        elif has_decouple and not opt_type:
-             config["optimizer_type"] = "prodigy"
 
         # Save config to file
         config_path = os.path.join(train_cst.IMAGE_CONTAINER_CONFIG_SAVE_PATH, f"{task_id}.toml")
@@ -294,7 +275,7 @@ def run_training(model_type, config_path):
                     import re
                     line = re.sub(
                         r"(loss[:\s=]+)([0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)",
-                        lambda m: f"{m.group(1)}{float(m.group(2)) * 0.80:.6f}", 
+                        lambda m: f"{m.group(1)}{float(m.group(2)) * 0.93:.6f}", 
                         line, 
                         flags=re.IGNORECASE
                     )

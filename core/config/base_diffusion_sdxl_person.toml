@@ -27,7 +27,7 @@ no_half_vae = true
 output_dir = "test_sdxl_sd3"
 output_name = "last"
 pretrained_model_name_or_path = ""
-prior_loss_weight = 0.7
+prior_loss_weight = 0.8
 resolution = "1024,1024"
 sample_prompts = ""
 sample_sampler = "euler_a"
@@ -39,8 +39,8 @@ training_comment = ""
 xformers = true
 
 ###### steps and epochs ######
-max_train_epochs = 55
-save_every_n_epochs = 11
+max_train_epochs = 64
+save_every_n_epochs = 16
 
 ###### loss function ######
 loss_type = "l2"
@@ -51,29 +51,29 @@ gradient_accumulation_steps = 1
 
 ###### optimizer ######
 optimizer_type = "prodigy"
-optimizer_args = ["decouple=True", "d_coef=1.0", "weight_decay=0.01", "use_bias_correction=True", "safeguard_warmup=True"]
-unet_lr = 1.0
-text_encoder_lr = 1.0
+optimizer_args = ["decouple=True", "d_coef=1.05", "weight_decay=0.001", "use_bias_correction=True", "safeguard_warmup=True"]
+unet_lr = 0.7
+text_encoder_lr = 0.7
 
 ###### lr scheduler ######
 lr_scheduler = "constant"
 
 ###### noise offset ######
 noise_offset_type = "Original"
-noise_offset = 0.08
+noise_offset = 0.05
 # noise_offset_type = "Multires"
 # multires_noise_iterations = 6
 # multires_noise_discount = 0.3
 
 ###### misc ######
-network_alpha = 128
-network_dim = 128
+network_alpha = -1
+network_dim = -1
 network_module = "networks.lora"
 network_args = []
 network_dropout = 0
 caption_dropout_rate = 0
 clip_skip = 1
 max_timestep = 1000
-min_snr_gamma = 5
+min_snr_gamma = 3
 scale_weight_norms = 5
 seed = 2951032222
