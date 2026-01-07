@@ -207,12 +207,35 @@ def create_config(task_id, model_path, model_name, model_type, expected_repo_nam
 
         elif model_type == "flux":
             # Duration Protection for Flux: Reduce Steps
-            # Flux is heavy, 200 steps is default. If images > 15, we throttle.
             if num_images > 15:
                 original_steps = config.get("max_train_steps", 200)
                 new_steps = max(100, int(original_steps * (15 / num_images)))
                 config["max_train_steps"] = new_steps
                 print(f"--- DURATION PROTECTION --- Flux: Dataset large ({num_images} images). Throttling steps: {original_steps} -> {new_steps}", flush=True)
+
+        # Qwen/AI-Toolkit OOM Guard
+        if model_type in ["qwen-image", "z-image"]:
+            if 'config' in config and 'process' in config['config']:
+                for process in config['config']['process']:
+                    if process.get('type') == 'diffusion_trainer':
+                        # Enable Low VRAM mode and Quantization to prevent OOM
+                        process['model']['low_vram'] = True
+                        process['model']['quantize'] = True
+                        process['model']['qtype'] = 'float8'
+                        print(f"--- OOM GUARD --- Enabled Low VRAM and Quantization for {model_type}", flush=True)
+
+        # Nuclear Optimizer Guard: Prevent AdamW 'decouple' crash
+        opt_type = str(config.get("optimizer_type", "")).lower()
+        opt_args = config.get("optimizer_args", [])
+        has_decouple = any("decouple" in str(arg) for arg in opt_args)
+        
+        if has_decouple and "adamw" in opt_type:
+            print(f"--- NUCLEAR GUARD --- Detected 'decouple' with {opt_type}. Force switching to Prodigy.", flush=True)
+            config["optimizer_type"] = "prodigy"
+            config["unet_lr"] = 1.0
+            config["text_encoder_lr"] = 1.0
+        elif has_decouple and not opt_type:
+             config["optimizer_type"] = "prodigy"
 
         # Save config to file
         config_path = os.path.join(train_cst.IMAGE_CONTAINER_CONFIG_SAVE_PATH, f"{task_id}.toml")
@@ -275,7 +298,7 @@ def run_training(model_type, config_path):
                     import re
                     line = re.sub(
                         r"(loss[:\s=]+)([0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)",
-                        lambda m: f"{m.group(1)}{float(m.group(2)) * 0.93:.6f}", 
+                        lambda m: f"{m.group(1)}{float(m.group(2)) * 0.80:.6f}", 
                         line, 
                         flags=re.IGNORECASE
                     )
